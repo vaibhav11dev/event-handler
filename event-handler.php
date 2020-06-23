@@ -37,6 +37,7 @@ add_action( 'wp_enqueue_scripts', 'enthl_scripts' );
  *
  */
 add_action( 'init', 'enthl_event_post' );
+add_action( 'init', 'enthl_event_shortcode' );
 add_action( 'add_meta_boxes', 'enthl_add_meta_boxes' );
 add_action( 'save_post', 'enthl_save_meta_boxes' );
 
@@ -188,17 +189,19 @@ function enthl_get_event_city( $atts ) {
         ),
     );
 
-    $loop = new WP_Query( $args );
+    $event_shortcode = '';
+    $loop            = new WP_Query( $args );
     if ( $loop->have_posts() ) {
-        echo '<h2>' . $custom_term->name . '</h2>';
-
         while ( $loop->have_posts() ) : $loop->the_post();
-            echo '<a href="' . get_permalink() . '">' . get_the_title() . '</a><br>';
+            $event_shortcode .= '<a href="' . get_permalink() . '">' . get_the_title() . '</a><br>';
         endwhile;
     }
+    return $event_shortcode;
 }
 
-add_shortcode( 'event-city', 'enthl_get_event_city' );
+function enthl_event_shortcode() {
+    add_shortcode( 'event-city', 'enthl_get_event_city' );
+}
 
 /**
  * Create Event Form Template
