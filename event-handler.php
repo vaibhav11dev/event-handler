@@ -19,6 +19,12 @@ if ( ! defined( 'ABSPATH' ) )
 load_plugin_textdomain( 'eventhandler', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 
 /**
+ * Register form for new user
+ *
+ */
+require_once plugin_dir_path( __FILE__ ) . 'templates/event-custom-form.php';
+
+/**
  * Add bootstrap-css, datepicker-css, datepicker-js, validate-plugin-js, ddcustom-js
  * 
  */
@@ -26,8 +32,8 @@ function enthl_scripts() {
     wp_enqueue_style( 'eventhandler-bootstrap', plugins_url( '/', __FILE__ ) . 'assets/css/bootstrap.min.css', '', '' );
     wp_enqueue_style( 'eventhandler-ui-css', 'https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css', '', '' );
     wp_enqueue_script( 'jquery-ui-datepicker' );
-    wp_enqueue_script( 'jquery-validate', plugins_url( '/', __FILE__ ) . 'assets/js/jquery.validate.min.js', array( 'jquery' ), '', true );
-    wp_enqueue_script( 'jquery-ddcustom', plugins_url( '/', __FILE__ ) . 'assets/js/form-validation.js', array( 'jquery' ), '', true );
+//    wp_enqueue_script( 'jquery-validate', plugins_url( '/', __FILE__ ) . 'assets/js/jquery.validate.min.js', array( 'jquery' ), '', true );
+    wp_enqueue_script( 'jquery-custom', plugins_url( '/', __FILE__ ) . 'assets/js/form-validation.js', array( 'jquery' ), '', true );
 }
 
 add_action( 'wp_enqueue_scripts', 'enthl_scripts' );
@@ -37,7 +43,6 @@ add_action( 'wp_enqueue_scripts', 'enthl_scripts' );
  *
  */
 add_action( 'init', 'enthl_event_post' );
-add_action( 'init', 'enthl_event_shortcode' );
 add_action( 'add_meta_boxes', 'enthl_add_meta_boxes' );
 add_action( 'save_post', 'enthl_save_meta_boxes' );
 
@@ -50,7 +55,7 @@ add_action( 'save_post', 'enthl_save_meta_boxes' );
 function enthl_event_post() {
     //create custom post type
     register_post_type(
-    'task', array(
+    'event', array(
         'label'               => esc_html__( 'Events', 'eventhandler' ),
         'supports'            => array( 'title', 'editor', 'thumbnail' ),
         'public'              => true,
@@ -84,7 +89,7 @@ function enthl_event_post() {
     );
 
     //Create custom texonomy for event post type
-    register_taxonomy( 'event_citys', [ 'task' ], array(
+    register_taxonomy( 'event_citys', [ 'event' ], array(
         'hierarchical'      => true, // make it hierarchical (like categories)
         'labels'            => array(
             'name'              => _x( 'Event Citys', 'taxonomy general name', 'eventhandler' ),
@@ -117,9 +122,9 @@ function enthl_event_post() {
 function enthl_add_meta_boxes() {
     $post_types = get_post_types( array( 'public' => true ) );
 
-    $disallowed = array( 'task' );
+    $disallowed = array( 'event' );
 
-    enthl_add_meta_box( 'enthl_post_options', 'Event Options', 'task' );
+    enthl_add_meta_box( 'enthl_post_options', 'Event Options', 'event' );
 }
 
 //Add event metabox value
@@ -168,52 +173,104 @@ function enthl_text( $id, $label, $desc = '' ) {
 }
 
 /**
- * Create shortcode for event city
- * 
- * get an event based on the city
- * 
- */
-function enthl_get_event_city( $atts ) {
-    if ( ! isset( $atts[ 'city_name' ] ) || empty( $atts[ 'city_name' ] ) ) {
-        return '';
-    }
-
-    wp_reset_query();
-    $args = array( 'post_type' => 'task',
-        'tax_query' => array(
-            array(
-                'taxonomy' => 'event_citys',
-                'field'    => 'slug',
-                'terms'    => $atts[ 'city_name' ],
-            ),
-        ),
-    );
-
-    $event_shortcode = '';
-    $loop            = new WP_Query( $args );
-    if ( $loop->have_posts() ) {
-        while ( $loop->have_posts() ) : $loop->the_post();
-            $event_shortcode .= '<a href="' . get_permalink() . '">' . get_the_title() . '</a><br>';
-        endwhile;
-    }
-    return $event_shortcode;
-}
-
-function enthl_event_shortcode() {
-    add_shortcode( 'event-city', 'enthl_get_event_city' );
-}
-
-/**
- * Create Event Form Template
- * 
- * Note: First create "Event Form" page
+ * Create shortcode for get event list by event city
+ * [get_event_list]
  * 
  */
-function enthl_event_form__template( $page_template ) {
-    if ( is_page( 'event-form' ) ) {
-        $page_template = dirname( __FILE__ ) . '/templates/event-form.php';
-    }
-    return $page_template;
-}
+add_shortcode( 'get_event_list', 'get_event_list_shortcode' );
 
-add_filter( 'page_template', 'enthl_event_form__template' );
+function get_event_list_shortcode() {
+    ob_start();
+    ?>
+    <!-- BLOG-GRID -->
+    <section class="module p-tb-content">
+        <div class="container">
+            <div class="row">
+                <?php
+                $terms = get_terms( array(
+                    'taxonomy'   => 'event_citys',
+                    'hide_empty' => false,
+                ) );
+                foreach ( $terms as $term ) {
+                    ?>
+                    <h4><?php esc_html_e( $term->name ) ?></h4>
+
+                    <!-- PRIMARY -->
+                    <div id="primary" class="post-content">
+                        <?php
+                        $args     = array( 'post_type' => 'event',
+                            'tax_query' => array(
+                                array(
+                                    'taxonomy' => 'event_citys',
+                                    'field'    => 'slug',
+                                    'terms'    => $term->name,
+                                ),
+                            ),
+                        );
+                        $wp_query = new WP_Query( $args );
+                        if ( $wp_query->have_posts() ) :
+                            ?>
+                            <div class="row multi-columns-row post-columns">
+                                <?php
+                                while ( $wp_query->have_posts() ) :
+                                    $wp_query->the_post();
+                                    ?>
+                                    <div class="col-sm-4 col-md-4 col-lg-4">
+                                        <?php ?>
+                                        <!--  BLOG CONTENT  -->
+                                        <article id="post-<?php the_ID(); ?>" class="event-post">
+
+                                            <div class="post-preview">
+                                                <div class="post-thumbnail">
+                                                    <?php
+                                                    the_post_thumbnail( 'full', array(
+                                                        'alt' => the_title_attribute( array(
+                                                            'echo' => false,
+                                                        ) ),
+                                                    ) );
+                                                    ?>
+                                                </div><!-- .post-thumbnail -->
+                                            </div>
+
+                                            <div class="post-content">
+
+                                                <div class="entry-meta entry-header">
+                                                    <?php
+                                                        the_title( '<h5 class="post-title"><a href="' . esc_url( get_permalink() ) . '" rel="bookmark">', '</a></h5>' );
+                                                    ?>
+                                                </div>
+
+                                                <div class="entry-content">
+                                                    <?php the_excerpt(); ?>
+                                                </div>
+
+                                            </div>
+
+                                        </article>
+                                        <!-- END BLOG CONTENT -->
+                                        <?php ?>
+                                    </div>			
+                                    <?php
+                                endwhile;
+                                ?>
+                            </div>
+                            <?php
+                        endif;
+                        $wp_query = null;
+                        $wp_query = $temp;
+
+                        /* Restore original Post Data */
+                        wp_reset_postdata();
+                        ?>
+                    </div>
+                    <!-- END PRIMARY -->
+                    <?php
+                }
+                ?>
+            </div><!-- .row -->
+        </div>
+    </section>
+    <!-- END BLOG-GRID -->
+    <?php
+    return ob_get_clean();
+}
