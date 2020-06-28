@@ -1,8 +1,11 @@
 
 jQuery(function () {
     // Initialize datepicker.
-    jQuery("#datepicker").datepicker();
-    
+    jQuery("#datepicker").datepicker({
+        dateFormat: 'mm/dd/yy',
+        startDate: '-3d'
+    });
+
     // Initialize form validation on the registration form.
     // It has the name attribute "registration"
 //    jQuery("form[name='eventform']").validate({

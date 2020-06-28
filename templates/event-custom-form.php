@@ -28,7 +28,7 @@ function event_registration_form( $post_title, $post_desc, $post_category, $feat
 
             <div class="col-md-12">
                 <label class="control-label"><?php esc_attr_e( 'Event Date', 'eventhandler' ) ?></label>
-                <input type="text" id="datepicker" class="form-control" name="event_date" value="<?php ( isset( $_POST[ 'event_date' ] ) ? $post_event_date : null ) ?>" />
+                <input type="text" id="datepicker" class="form-control" name="event_date" readonly="true" style="background:white;" value="<?php ( isset( $_POST[ 'event_date' ] ) ? $post_event_date : null ) ?>" />
             </div>
 
             <div class="col-md-12">
